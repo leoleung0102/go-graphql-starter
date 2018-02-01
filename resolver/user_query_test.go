@@ -1,9 +1,9 @@
 package resolver
 
 import (
-	"github.com/OscarYuen/go-graphql-starter/config"
-	"github.com/OscarYuen/go-graphql-starter/schema"
-	"github.com/OscarYuen/go-graphql-starter/service"
+	"github.com/leoleung0102/go-graphql-starter/config"
+	"github.com/leoleung0102/go-graphql-starter/schema"
+	"github.com/leoleung0102/go-graphql-starter/service"
 	"github.com/neelance/graphql-go"
 	"github.com/neelance/graphql-go/gqltesting"
 	"golang.org/x/net/context"

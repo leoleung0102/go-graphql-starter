@@ -3,8 +3,8 @@ package service
 import (
 	"database/sql"
 	"errors"
-	"github.com/OscarYuen/go-graphql-starter/config"
-	"github.com/OscarYuen/go-graphql-starter/model"
+	"github.com/leoleung0102/go-graphql-starter/config"
+	"github.com/leoleung0102/go-graphql-starter/model"
 	"github.com/jmoiron/sqlx"
 	"github.com/op/go-logging"
 )

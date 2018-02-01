@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/OscarYuen/go-graphql-starter/model"
+	"github.com/leoleung0102/go-graphql-starter/model"
 	"github.com/spf13/viper"
 	"log"
 	"testing"
@@ -25,7 +25,7 @@ func init() {
 	appName = viper.Get("app-name").(string)
 	signedSecret = viper.Get("auth.jwt-secret").(string)
 	expiredTimeInSecond = time.Duration(viper.Get("auth.jwt-expire-in").(int64))
-	authService = NewAuthService(&appName, &signedSecret, &expiredTimeInSecond)
+	//authService = NewAuthService(&appName, &signedSecret, &expiredTimeInSecond)
 }
 
 func TestSignJWT(t *testing.T) {

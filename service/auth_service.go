@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/OscarYuen/go-graphql-starter/model"
+	"github.com/leoleung0102/go-graphql-starter/model"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/op/go-logging"
 	"strconv"
