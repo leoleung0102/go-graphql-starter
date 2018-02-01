@@ -28,19 +28,12 @@ func (r *Resolver) CreateUser(ctx context.Context, args *struct {
 	//i := strings.Index(user.Email, "@")
 	//nickname := user.Email[0:i]
 
-	recipient, emailErr := ctx.Value("emailService").(*service.EmailService).WelcomeEmail(
-		ctx,
+	go ctx.Value("emailService").(*service.EmailService).SendEmail(
 		"leoleung@inno-lab.co",
 		user.Email,
 		"Welcome to Good Malling",
 		"This email was sent with Amazon SES using the AWS SDK for Go.",
 	)
-
-	if emailErr != nil {
-		ctx.Value("logger").(*logging.Logger).Errorf("Welcome email error: %v", emailErr)
-		return nil, emailErr
-	}
-	ctx.Value("logger").(*logging.Logger).Debugf("Welcome Email has sent to: %v", recipient)
 
 	return &userResolver{user}, nil
 }

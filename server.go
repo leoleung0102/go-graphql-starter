@@ -56,7 +56,7 @@ func main() {
 	roleService := service.NewRoleService(db, log)
 	userService := service.NewUserService(db, roleService, log)
 	authService := service.NewAuthService(&appName, &signedSecret, &expiredTimeInSecond, log)
-	emailService := service.NewEmailService(svc)
+	emailService := service.NewEmailService(svc, log)
 
 	ctx = context.WithValue(ctx, "log", log)
 	ctx = context.WithValue(ctx, "roleService", roleService)
@@ -75,5 +75,5 @@ func main() {
 		http.ServeFile(w, r, "graphiql.html")
 	}))
 
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	log.Fatal(http.ListenAndServe(":3001", nil))
 }
