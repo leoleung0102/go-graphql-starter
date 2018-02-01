@@ -59,6 +59,17 @@ func (u *UserService) CreateUser(user *model.User) (*model.User, error) {
 	return user, nil
 }
 
+func (u *UserService) ResetPassword(user *model.User) (*model.User, error) {
+	userSQL := `UPDATE users SET password = ? WHERE user.Email = ?`
+
+	_, err := u.db.Exec(userSQL, user.Password , user.Email)
+
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (u *UserService) List(first *int, after *string) ([]*model.User, error) {
 	users := make([]*model.User, 0)
 	decodedIndex, _ := DecodeCursor(after)
