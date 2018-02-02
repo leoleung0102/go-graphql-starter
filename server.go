@@ -55,7 +55,7 @@ func main() {
 	log := h.NewLogger(&appName, debugMode, &logFormat)
 	roleService := service.NewRoleService(db, log)
 	userService := service.NewUserService(db, roleService, log)
-	authService := service.NewAuthService(&appName, &signedSecret, &expiredTimeInSecond, log)
+	authService := service.NewAuthService(&appName, &signedSecret, &expiredTimeInSecond, log, db)
 	emailService := service.NewEmailService(svc, log)
 
 	ctx = context.WithValue(ctx, "log", log)
@@ -67,6 +67,10 @@ func main() {
 	graphqlSchema := graphql.MustParseSchema(schema.GetRootSchema(), &resolver.Resolver{})
 
 	http.Handle("/login", h.AddContext(ctx, h.Login()))
+
+	http.Handle("/generate-token", h.AddContext(ctx, h.GenerateToken()))
+
+	//http.Handle("/resetPassword", h.AddContext(ctx, h.ResetPassword()))
 
 	loggerHandler := &h.LoggerHandler{debugMode, log}
 	http.Handle("/query", h.AddContext(ctx, loggerHandler.Logging(h.Authenticate(&h.GraphQL{Schema: graphqlSchema, Loaders: loader.NewLoaderCollection()}))))

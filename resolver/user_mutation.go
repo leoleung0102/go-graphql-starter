@@ -33,6 +33,8 @@ func (r *Resolver) CreateUser(ctx context.Context, args *struct {
 		user.Email,
 		"Welcome to Good Malling",
 		"This email was sent with Amazon SES using the AWS SDK for Go.",
+		"welcome",
+		"",
 	)
 
 	return &userResolver{user}, nil

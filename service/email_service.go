@@ -25,13 +25,13 @@ func NewEmailService(ses *ses.SES, log *logging.Logger) *EmailService {
 	return &EmailService{ses, log}
 }
 
-func (e *EmailService) SendEmail(Sender string, Recipient string, Subject string, TextBody string)(string, error) {
+func (e *EmailService) SendEmail(Sender string, Recipient string, Subject string, TextBody string, emailType string, Token interface{})(string, error) {
 
 	t := template.New("emailContentTemplate")
 
-	data, _ := ioutil.ReadFile("./service/template.html")
+	data, _ := ioutil.ReadFile("./template/" + emailType + ".html")
 
-	emailTemplate := model.EmailTemplate{Recipient:Recipient}
+	emailTemplate := model.EmailTemplate{Recipient:Recipient, Token:Token}
 
 	if t, Err =  t.Parse(string(data)); Err != nil {
 		e.log.Errorf("error trying to parse mail template %v", Err)
