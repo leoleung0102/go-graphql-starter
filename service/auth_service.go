@@ -87,7 +87,11 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 	return &token, err
 }
 
-func (a *AuthService) ResetPassword(token uuid.UUID) ( error) {
+func (a *AuthService) CheckTokenValidation(user string, token interface{}) (error) {
+
+
+
+
 	_, err := uuid.NewV4()
 	if err != nil {
 		fmt.Errorf("Something went wrong: %s", err)

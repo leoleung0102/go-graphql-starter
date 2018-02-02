@@ -108,6 +108,8 @@ func GenerateToken() http.Handler {
 		tokenResponse := &model.TokenResponse{}
 		userEmail := r.Header.Get("Email")
 
+		encodedEmail := base64.StdEncoding.EncodeToString([]byte(userEmail))
+
 		if r.Method != http.MethodPost {
 			response := &model.Response{
 				Code:  http.StatusMethodNotAllowed,
@@ -135,7 +137,7 @@ func GenerateToken() http.Handler {
 			"Reset Password",
 			"",
 			"reset",
-			token,
+			"http://localhost:3001/reset-password?user=" + encodedEmail + "&token=" + token.String(),
 		)
 
 		response := &model.Response{
@@ -171,12 +173,16 @@ func validateBasicAuthHeader(r *http.Request) (*model.UserCredentials, error) {
 	return &userCredentials, nil
 }
 
-/*func ResetPassword() http.Handler {
+func CheckTokenValidation() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		ctx := r.Context()
 		tokenResponse := &model.TokenResponse{}
-		token := r.Header.Get("Token")
+
+		token := r.URL.Query().Get("token")
+		encodedEmail := r.URL.Query().Get("user")
+
+		email,_ := base64.StdEncoding.DecodeString(encodedEmail)
 
 		if r.Method != http.MethodPost {
 			response := &model.Response{
@@ -188,7 +194,7 @@ func validateBasicAuthHeader(r *http.Request) (*model.UserCredentials, error) {
 			return
 		}
 
-		token, err := ctx.Value("authService").(*service.AuthService).ResetPassword()
+		err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),token)
 
 		if err != nil {
 			response := &model.Response{
@@ -205,10 +211,9 @@ func validateBasicAuthHeader(r *http.Request) (*model.UserCredentials, error) {
 		}
 
 		tokenResponse.Response = response
-		tokenResponse.AccessToken = *token
 		writeResponse(w, tokenResponse, tokenResponse.Code)
 	})
-}*/
+}
 
 func validateBearerAuthHeader(ctx context.Context, r *http.Request) (*jwt.Token, error) {
 	var tokenString string
