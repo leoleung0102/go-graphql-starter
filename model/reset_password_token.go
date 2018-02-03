@@ -1,9 +1,12 @@
 package model
 
+import "github.com/satori/go.uuid"
+
 type Token struct {
-	ID        int64
-	UserID    int64 `db:user_id`
-	Token     string
-	IsUsed    bool `db:is_used`
-	CreatedAt string `db:"created_at"`
+	ID           uuid.UUID
+	UserID       int64 `db:user_id`
+	Token        uuid.UUID
+	IsExpired    bool `db:is_expired`
+	IsUsed       bool `db:is_used`
+	CreatedAt    string `db:"created_at"`
 }

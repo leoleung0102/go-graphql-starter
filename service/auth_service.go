@@ -10,6 +10,7 @@ import (
 	"time"
 	"github.com/satori/go.uuid"
 	"github.com/jmoiron/sqlx"
+	"log"
 )
 
 type AuthService struct {
@@ -62,8 +63,6 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 
 	encodedToken := base64.StdEncoding.EncodeToString([]byte(token.String()))
 
-	//decodedToken,_ := base64.StdEncoding.DecodeString(encodedToken)
-
 	user := &model.User{}
 
 	userSQL := `SELECT user.*
@@ -75,11 +74,10 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 		a.log.Errorf("Error in retrieving user : %v", err)
 	}
 
-	resetPasswordTokenSQL := `INSERT INTO reset_password_token (id,user_id,token,is_used)
-	VALUES ($1, $2, $3, $4)`
+	resetPasswordTokenSQL := `INSERT INTO reset_password_token (id,user_id,token, is_expired,is_used)
+	VALUES ($1, $2, $3, $4, $5)`
 
-	// The token has not yet encoded
-	_, err = a.db.Exec(resetPasswordTokenSQL, tokenID, user.ID, encodedToken, false)
+	_, err = a.db.Exec(resetPasswordTokenSQL, tokenID, user.ID, encodedToken, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -87,15 +85,26 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 	return &token, err
 }
 
-func (a *AuthService) CheckTokenValidation(user string, token interface{}) (error) {
+func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) (error) {
 
+	//resetPasswordToken := &model.Token{}
 
+	SQL := `SELECT *
+	FROM reset_password_token rpt
+	INNER JOIN users u ON rpt.user_id = u.id
+	WHERE u.email = ? 
+	AND rpt.is_used = FALSE 
+	AND rpt.is_expired = FALSE 
+    `
 
-
-	_, err := uuid.NewV4()
+	rows, err := a.db.Queryx(SQL, userEmail)
+	/*err := rows.StructScan(rows)
 	if err != nil {
-		fmt.Errorf("Something went wrong: %s", err)
-	}
+		a.log.Errorf("Error in retrieving user : %v", err)
+	}*/
+
+	log.Println(rows);
+	//decodedToken,_ := base64.StdEncoding.DecodeString(resetPasswordToken.token)
 
 	return err
 }
