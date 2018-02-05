@@ -87,9 +87,9 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 
 func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) (error) {
 
-	//resetPasswordToken := &model.Token{}
+	resetPasswordToken := &model.Token{}
 
-	SQL := `SELECT *
+	SQL := `SELECT rpt.*
 	FROM reset_password_token rpt
 	INNER JOIN users u ON rpt.user_id = u.id
 	WHERE u.email = ? 
@@ -98,13 +98,19 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) 
     `
 
 	rows, err := a.db.Queryx(SQL, userEmail)
-	/*err := rows.StructScan(rows)
-	if err != nil {
-		a.log.Errorf("Error in retrieving user : %v", err)
-	}*/
 
-	log.Println(rows);
-	//decodedToken,_ := base64.StdEncoding.DecodeString(resetPasswordToken.token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.StructScan(&resetPasswordToken)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(base64.StdEncoding.DecodeString(string(resetPasswordToken.Token)))
+	}
 
 	return err
 }
