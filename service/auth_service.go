@@ -93,8 +93,8 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) 
 	FROM reset_password_token rpt
 	INNER JOIN users u ON rpt.user_id = u.id
 	WHERE u.email = ? 
-	AND rpt.is_used = FALSE 
-	AND rpt.is_expired = FALSE 
+	AND rpt.is_used = 0
+	AND rpt.is_expired = 0
     `
 
 	rows, err := a.db.Queryx(SQL, userEmail)
