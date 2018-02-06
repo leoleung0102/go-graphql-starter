@@ -18,7 +18,7 @@ type AuthService struct {
 	signedSecret        *string
 	expiredTimeInSecond *time.Duration
 	log                 *logging.Logger
-	db  *sqlx.DB
+	db                  *sqlx.DB
 }
 
 func NewAuthService(appName *string, signedSecret *string, expiredTimeInSecond *time.Duration, log *logging.Logger, db *sqlx.DB) *AuthService {
@@ -85,7 +85,7 @@ func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
 	return &token, err
 }
 
-func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) (error) {
+func (a *AuthService) CheckTokenValidation(userEmail string, token string) (string, error) {
 
 	resetPasswordToken := &model.Token{}
 
@@ -95,6 +95,7 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) 
 	WHERE u.email = ? 
 	AND rpt.is_used = 0
 	AND rpt.is_expired = 0
+	AND DATETIME(rpt.created_at, '+60 minutes') > DATETIME('now');
     `
 
 	rows, err := a.db.Queryx(SQL, userEmail)
@@ -109,8 +110,61 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token interface{}) 
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println(base64.StdEncoding.DecodeString(string(resetPasswordToken.Token)))
+		tokenByte, _ := base64.StdEncoding.DecodeString(resetPasswordToken.Token)
+
+		tokenString := string(tokenByte)
+
+		parsedTime,_ := time.Parse(time.RFC3339,resetPasswordToken.CreatedAt)
+		expired := !(time.Now().UTC().Before(parsedTime.Add(1 * time.Hour)))
+
+		//go a.TokenUpdate(userEmail,resetPasswordToken.Token)
+
+		if token == tokenString && !expired {
+			return tokenString, err
+		}
+	}
+	return "", err
+}
+
+func (a *AuthService) TokenUpdate(userEmail string, tokenString string){
+	tx, err := a.db.Begin()
+
+	tokenSQL := `UPDATE reset_password_token
+				 SET is_expired = 1
+				 WHERE user_id = (
+					 SELECT id FROM users
+					 WHERE email = $1
+				 )
+				 AND token = $2`
+
+	if err != nil {
+		a.log.Errorf("Error in updating token : %v", err)
 	}
 
-	return err
+	_, err = tx.Exec(tokenSQL, userEmail, tokenString)
+
+	if err != nil {
+		tx.Rollback()
+		a.log.Errorf("Error in updating token : %v", err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		a.log.Errorf("Error in updating token : %v", err)
+	}
+}
+
+func (a *AuthService) CheckTokenExpire(){
+
+	tx := a.db.MustBegin()
+
+	tokenSQL := `UPDATE reset_password_token
+				 	 SET is_expired = 1
+					 WHERE created_at < DATETIME('now', '-180 minutes')`
+
+	tx.MustExec(tokenSQL)
+
+	err := tx.Commit()
+	if err != nil {
+		a.log.Errorf("Error in updating token : %v", err)
+	}
 }

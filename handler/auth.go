@@ -137,7 +137,7 @@ func GenerateToken() http.Handler {
 			"Reset Password",
 			"",
 			"reset",
-			"http://localhost:3001/reset-password?user=" + encodedEmail + "&token=" + token.String(),
+			"http://localhost:3001/reset-password-validation?user=" + encodedEmail + "&token=" + token.String(),
 		)
 
 		response := &model.Response{
@@ -177,32 +177,32 @@ func CheckTokenValidation() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		ctx := r.Context()
-		tokenResponse := &model.TokenResponse{}
 
 		token := r.URL.Query().Get("token")
 		encodedEmail := r.URL.Query().Get("user")
 
 		email,_ := base64.StdEncoding.DecodeString(encodedEmail)
 
-		if r.Method != http.MethodPost {
+		if r.Method != http.MethodGet {
 			response := &model.Response{
 				Code:  http.StatusMethodNotAllowed,
 				Error: config.PostMethodSupported,
 			}
-			tokenResponse.Response = response
-			writeResponse(w, tokenResponse, tokenResponse.Code)
+			writeResponse(w, response, response.Code)
 			return
 		}
 
-		err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),token)
+		//Should set to cron job
+		go ctx.Value("authService").(*service.AuthService).CheckTokenExpire()
+
+		validToken, err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),token)
 
 		if err != nil {
 			response := &model.Response{
 				Code:  http.StatusBadRequest,
 				Error: err.Error(),
 			}
-			tokenResponse.Response = response
-			writeResponse(w, tokenResponse, tokenResponse.Code)
+			writeResponse(w, response, response.Code)
 			return
 		}
 
@@ -210,8 +210,53 @@ func CheckTokenValidation() http.Handler {
 			Code: http.StatusOK,
 		}
 
-		tokenResponse.Response = response
-		writeResponse(w, tokenResponse, tokenResponse.Code)
+		if validToken != "" {
+			http.Redirect(w,r,"http://localhost:3001/reset-password?user=" + encodedEmail + "&token=" + validToken, 301)
+		}else{
+			http.Redirect(w,r,"http://localhost:3001/not-found", 404)
+		}
+
+		writeResponse(w, response, response.Code)
+	})
+}
+
+func ResetPassword() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		//ctx := r.Context()
+
+		/*token := r.URL.Query().Get("token")
+		encodedEmail := r.URL.Query().Get("user")
+
+		email,_ := base64.StdEncoding.DecodeString(encodedEmail)*/
+
+		if r.Method != http.MethodGet {
+			response := &model.Response{
+				Code:  http.StatusMethodNotAllowed,
+				Error: config.PostMethodSupported,
+			}
+			writeResponse(w, response, response.Code)
+			return
+		}
+
+		//ctx.Value("userService").(*service.UserService).ResetPassword()
+
+		/*validToken, err := ctx.Value("userService").(*service.UserService).ResetPassword()
+
+		if err != nil {
+			response := &model.Response{
+				Code:  http.StatusBadRequest,
+				Error: err.Error(),
+			}
+			writeResponse(w, response, response.Code)
+			return
+		}*/
+
+		response := &model.Response{
+			Code: http.StatusOK,
+		}
+
+		writeResponse(w, response, response.Code)
 	})
 }
 
