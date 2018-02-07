@@ -193,7 +193,7 @@ func CheckTokenValidation() http.Handler {
 		}
 
 		//Should set to cron job
-		go ctx.Value("authService").(*service.AuthService).CheckTokenExpire()
+		//go ctx.Value("authService").(*service.AuthService).CheckTokenExpire()
 
 		validToken, err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),token)
 

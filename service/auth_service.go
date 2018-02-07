@@ -95,7 +95,8 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token string) (stri
 	WHERE u.email = ? 
 	AND rpt.is_used = 0
 	AND rpt.is_expired = 0
-	AND DATETIME(rpt.created_at, '+60 minutes') > DATETIME('now');
+	AND DATETIME(rpt.created_at, '+60 minutes') > DATETIME('now')
+	ORDER BY rpt.created_at DESC
     `
 
 	rows, err := a.db.Queryx(SQL, userEmail)
@@ -114,19 +115,16 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token string) (stri
 
 		tokenString := string(tokenByte)
 
-		parsedTime,_ := time.Parse(time.RFC3339,resetPasswordToken.CreatedAt)
-		expired := !(time.Now().UTC().Before(parsedTime.Add(1 * time.Hour)))
-
 		//go a.TokenUpdate(userEmail,resetPasswordToken.Token)
 
-		if token == tokenString && !expired {
+		if token == tokenString {
 			return tokenString, err
 		}
 	}
 	return "", err
 }
 
-func (a *AuthService) TokenUpdate(userEmail string, tokenString string){
+/*func (a *AuthService) TokenUpdate(userEmail string, tokenString string){
 	tx, err := a.db.Begin()
 
 	tokenSQL := `UPDATE reset_password_token
@@ -151,7 +149,7 @@ func (a *AuthService) TokenUpdate(userEmail string, tokenString string){
 	if err != nil {
 		a.log.Errorf("Error in updating token : %v", err)
 	}
-}
+}*/
 
 func (a *AuthService) CheckTokenExpire(){
 
