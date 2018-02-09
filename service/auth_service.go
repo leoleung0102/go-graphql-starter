@@ -4,12 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/leoleung0102/go-graphql-starter/model"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/op/go-logging"
 	"strconv"
 	"time"
 	"github.com/satori/go.uuid"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 )
 
@@ -48,41 +49,38 @@ func (a *AuthService) ValidateJWT(tokenString *string) (*jwt.Token, error) {
 	return token, err
 }
 
-func (a *AuthService) GenerateToken(userEmail string) (*uuid.UUID, error) {
+func (a *AuthService) GenerateToken(user *model.User) (string, error) {
+
 	token, err := uuid.NewV4()
 	if err != nil {
-		fmt.Errorf("Something went wrong: %s", err)
-		return nil, err
+		a.log.Errorf("Error in creating UUID: %v", err)
+		return "", err
 	}
 
 	tokenID, err := uuid.NewV4()
 	if err != nil {
-		fmt.Errorf("Something went wrong: %s", err)
-		return nil, err
+		a.log.Errorf("Error in creating UUID: %v", err)
+		return "", err
+	}
+
+	hashedToken, err := bcrypt.GenerateFromPassword([]byte(token.String()), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println(err)
+		return "", err
 	}
 
 	encodedToken := base64.StdEncoding.EncodeToString([]byte(token.String()))
 
-	user := &model.User{}
-
-	userSQL := `SELECT user.*
-	FROM users user
-	WHERE user.email = ? `
-	row := a.db.QueryRowx(userSQL, userEmail)
-	err = row.StructScan(user)
-	if err != nil {
-		a.log.Errorf("Error in retrieving user : %v", err)
-	}
-
 	resetPasswordTokenSQL := `INSERT INTO reset_password_token (id,user_id,token, is_expired,is_used)
 	VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = a.db.Exec(resetPasswordTokenSQL, tokenID, user.ID, encodedToken, false, false)
+	_, err = a.db.Exec(resetPasswordTokenSQL, tokenID, user.ID, string(hashedToken), false, false)
 	if err != nil {
-		return nil, err
+		a.log.Errorf("Error in inserting token: %v", err)
+		return "", err
 	}
 
-	return &token, err
+	return encodedToken, err
 }
 
 func (a *AuthService) CheckTokenValidation(userEmail string, token string) (string, error) {
@@ -97,72 +95,41 @@ func (a *AuthService) CheckTokenValidation(userEmail string, token string) (stri
 	AND rpt.is_expired = 0
 	AND DATETIME(rpt.created_at, '+60 minutes') > DATETIME('now')
 	ORDER BY rpt.created_at DESC
+	LIMIT 1
     `
 
-	rows, err := a.db.Queryx(SQL, userEmail)
+	row := a.db.QueryRowx(SQL, userEmail)
+	err := row.StructScan(resetPasswordToken)
 
 	if err != nil {
+		a.log.Errorf("Error in retrieving token : %v", err)
 		log.Fatal(err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		err := rows.StructScan(&resetPasswordToken)
-		if err != nil {
-			log.Fatal(err)
-		}
-		tokenByte, _ := base64.StdEncoding.DecodeString(resetPasswordToken.Token)
+	tokenString := string(token)
 
-		tokenString := string(tokenByte)
+	err = bcrypt.CompareHashAndPassword([]byte(resetPasswordToken.Token), []byte(tokenString))
 
-		//go a.TokenUpdate(userEmail,resetPasswordToken.Token)
-
-		if token == tokenString {
-			return tokenString, err
-		}
+	if err != nil {
+		a.log.Errorf("Error in validating token - Compare Token : %v", err)
+		return "", err
+	}else{
+		return token, err
 	}
-	return "", err
 }
 
-/*func (a *AuthService) TokenUpdate(userEmail string, tokenString string){
-	tx, err := a.db.Begin()
-
-	tokenSQL := `UPDATE reset_password_token
-				 SET is_expired = 1
-				 WHERE user_id = (
-					 SELECT id FROM users
-					 WHERE email = $1
-				 )
-				 AND token = $2`
-
-	if err != nil {
-		a.log.Errorf("Error in updating token : %v", err)
-	}
-
-	_, err = tx.Exec(tokenSQL, userEmail, tokenString)
-
-	if err != nil {
-		tx.Rollback()
-		a.log.Errorf("Error in updating token : %v", err)
-	}
-	err = tx.Commit()
-	if err != nil {
-		a.log.Errorf("Error in updating token : %v", err)
-	}
-}*/
-
-func (a *AuthService) CheckTokenExpire(){
+func (a *AuthService) CheckTokenExpire() {
 
 	tx := a.db.MustBegin()
 
 	tokenSQL := `UPDATE reset_password_token
 				 	 SET is_expired = 1
-					 WHERE created_at < DATETIME('now', '-180 minutes')`
+					 WHERE created_at < DATETIME('now', '-60 minutes')`
 
 	tx.MustExec(tokenSQL)
 
 	err := tx.Commit()
 	if err != nil {
-		a.log.Errorf("Error in updating token : %v", err)
+		a.log.Errorf("Error in updating token status: %v", err)
 	}
 }

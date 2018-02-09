@@ -72,7 +72,7 @@ func main() {
 
 	http.Handle("/reset-password-validation", h.AddContext(ctx, h.CheckTokenValidation()))
 
-	http.Handle("/reset-password", h.AddContext(ctx, h.ResetPassword()))
+	//http.Handle("/reset-password", h.AddContext(ctx, h.ResetPassword()))
 
 	loggerHandler := &h.LoggerHandler{debugMode, log}
 	http.Handle("/query", h.AddContext(ctx, loggerHandler.Logging(h.Authenticate(&h.GraphQL{Schema: graphqlSchema, Loaders: loader.NewLoaderCollection()}))))

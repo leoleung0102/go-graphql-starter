@@ -120,7 +120,18 @@ func GenerateToken() http.Handler {
 			return
 		}
 
-		token, err := ctx.Value("authService").(*service.AuthService).GenerateToken(userEmail)
+		user,err := ctx.Value("userService").(*service.UserService).FindByEmail(userEmail)
+		if err != nil {
+			response := &model.Response{
+				Code:  http.StatusBadRequest,
+				Error: err.Error(),
+			}
+			tokenResponse.Response = response
+			writeResponse(w, tokenResponse, tokenResponse.Code)
+			return
+		}
+
+		tokenForURL, err := ctx.Value("authService").(*service.AuthService).GenerateToken(user)
 		if err != nil {
 			response := &model.Response{
 				Code:  http.StatusBadRequest,
@@ -137,7 +148,7 @@ func GenerateToken() http.Handler {
 			"Reset Password",
 			"",
 			"reset",
-			"http://localhost:3001/reset-password-validation?user=" + encodedEmail + "&token=" + token.String(),
+			"http://localhost:3001/reset-password-validation?user=" + encodedEmail + "&token=" + tokenForURL,
 		)
 
 		response := &model.Response{
@@ -145,7 +156,6 @@ func GenerateToken() http.Handler {
 		}
 
 		tokenResponse.Response = response
-		tokenResponse.AccessToken = *token
 		writeResponse(w, tokenResponse, tokenResponse.Code)
 	})
 }
@@ -178,10 +188,11 @@ func CheckTokenValidation() http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		ctx := r.Context()
 
-		token := r.URL.Query().Get("token")
+		encodedToken := r.URL.Query().Get("token")
 		encodedEmail := r.URL.Query().Get("user")
 
 		email,_ := base64.StdEncoding.DecodeString(encodedEmail)
+		token,_ := base64.StdEncoding.DecodeString(encodedToken)
 
 		if r.Method != http.MethodGet {
 			response := &model.Response{
@@ -195,7 +206,7 @@ func CheckTokenValidation() http.Handler {
 		//Should set to cron job
 		//go ctx.Value("authService").(*service.AuthService).CheckTokenExpire()
 
-		validToken, err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),token)
+		validToken, err := ctx.Value("authService").(*service.AuthService).CheckTokenValidation(string(email),string(token))
 
 		if err != nil {
 			response := &model.Response{
